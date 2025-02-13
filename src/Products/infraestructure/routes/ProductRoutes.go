@@ -12,9 +12,11 @@ func Routes(router *gin.Engine) {
 	getAllProduct := dependencies.GetGetAllProductController().Execute
 	deleteProducts := dependencies.GetDeleteProductController().Execute
 	updateProducts := dependencies.GetUpdateProductController().Execute
+	getByIdProducts := dependencies.GetByIdProductController().Execute
 
 	routes.POST("/", createProduct)
 	routes.GET("/", getAllProduct)
 	routes.DELETE("/:id", deleteProducts)
 	routes.PUT("/:id", updateProducts)
+	routes.GET("/:id", getByIdProducts)
 }

@@ -84,3 +84,19 @@ func (mysql *MySQL) Update(id int32, name string, price float32) error {
 	fmt.Println("Producto actualizado")
 	return nil
 }
+func (mysql *MySQL) GetById(id int32) (domain.Product, error) {
+	var UserById domain.Product
+
+	query := "SELECT id, name, price FROM products WHERE id=?"
+	row := mysql.DB.QueryRow(query, id)
+
+	err := row.Scan(&UserById.Id, &UserById.Name, &UserById.Price)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return UserById, fmt.Errorf("producto con id no encontrado", id)
+		}
+		return UserById, err
+	}
+
+	return UserById, nil
+}

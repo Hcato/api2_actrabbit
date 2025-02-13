@@ -50,3 +50,7 @@ func GetUpdateProductController() *controllers.UpdateProductController {
 	caseUpdateProduct := application.NewUpdateProduct(&mySQL)
 	return controllers.NewUpdateProductController(caseUpdateProduct)
 }
+func GetByIdProductController() *controllers.GetByIdProductController {
+	caseGetByIdProduct := application.NewGetByIdProduct(&mySQL)
+	return controllers.NewGetByIdProductController(caseGetByIdProduct)
+}
