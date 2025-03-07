@@ -31,6 +31,5 @@ func main() {
 	})
 	routesProduct.Routes(r)
 	routesUser.Routes(r)
-	r.Run()
-
+	r.Run(":9090")
 }
