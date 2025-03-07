@@ -34,13 +34,13 @@ func Init() {
 
 	// Inicializar RabbitMQConsumer con todos los casos de uso
 	consumer, err = infraestructure.NewRabbitMQConsumer(
-		"amqp://cato:1234@3.233.111.240/", // URL de RabbitMQ
-		"product",                         // Nombre de la cola
-		createProductUseCase,              // Caso de uso de creación
-		getAllProductUseCase,              // Caso de uso de obtener todos
-		getByIdProductUseCase,             // Caso de uso de obtener por ID
-		updateProductUseCase,              // Caso de uso de actualización
-		deleteProductUseCase,              // Caso de uso de eliminación
+		"",                    // URL de RabbitMQ
+		"product",             // Nombre de la cola
+		createProductUseCase,  // Caso de uso de creación
+		getAllProductUseCase,  // Caso de uso de obtener todos
+		getByIdProductUseCase, // Caso de uso de obtener por ID
+		updateProductUseCase,  // Caso de uso de actualización
+		deleteProductUseCase,  // Caso de uso de eliminación
 	)
 
 	if err != nil {
