@@ -2,6 +2,7 @@ package infraestructure
 
 import (
 	"api/src/Products/application"
+	"api/src/core"
 	"encoding/json"
 	"log"
 
@@ -21,6 +22,7 @@ type RabbitMQConsumer struct {
 	conn           *amqp.Connection
 	channel        *amqp.Channel
 	queueName      string
+	publisher      *core.RabbitMQPublisher
 	createUseCase  *application.CreateProductUsecase
 	getAllUseCase  *application.GetAllProduct
 	getByIdUseCase *application.GetByIdProduct
@@ -29,7 +31,7 @@ type RabbitMQConsumer struct {
 }
 
 // NewRabbitMQConsumer crea un nuevo consumidor de RabbitMQ
-func NewRabbitMQConsumer(url, queueName string, createUseCase *application.CreateProductUsecase, getAllUseCase *application.GetAllProduct, getByIdUseCase *application.GetByIdProduct, updateUseCase *application.UpdateProduct, deleteUseCase *application.DeleteProductUsecase) (*RabbitMQConsumer, error) {
+func NewRabbitMQConsumer(url, queueName, responseQueue string, createUseCase *application.CreateProductUsecase, getAllUseCase *application.GetAllProduct, getByIdUseCase *application.GetByIdProduct, updateUseCase *application.UpdateProduct, deleteUseCase *application.DeleteProductUsecase) (*RabbitMQConsumer, error) {
 	conn, err := amqp.Dial(url)
 	if err != nil {
 		return nil, err
@@ -55,10 +57,18 @@ func NewRabbitMQConsumer(url, queueName string, createUseCase *application.Creat
 		return nil, err
 	}
 
+	publisher, err := core.NewRabbitMQPublisher(url, responseQueue)
+	if err != nil {
+		ch.Close()
+		conn.Close()
+		return nil, err
+	}
+
 	return &RabbitMQConsumer{
 		conn:           conn,
 		channel:        ch,
 		queueName:      queueName,
+		publisher:      publisher,
 		createUseCase:  createUseCase,
 		getAllUseCase:  getAllUseCase,
 		getByIdUseCase: getByIdUseCase,
@@ -94,28 +104,33 @@ func (r *RabbitMQConsumer) Start() {
 			case "post":
 				log.Printf("[RabbitMQ] Guardando producto: %s", msg.Name)
 				r.createUseCase.Execute(msg.Name, msg.Price)
+				r.publisher.PublishMessage(map[string]string{"Status": "success", "Message": "Producto creado exitosamente"})
 
 			case "getById":
 				log.Printf("[RabbitMQ] Buscando producto con ID: %d", msg.Id)
 				product, err := r.getByIdUseCase.Execute(msg.Id)
 				if err != nil {
-					log.Printf("[RabbitMQ] Error al obtener producto: %s", err)
+					r.publisher.PublishMessage(map[string]string{"Status": "error", "Message": "Error al obtener producto"})
 				} else {
-					log.Printf("[RabbitMQ] Producto encontrado: %+v", product)
+					r.publisher.PublishMessage(map[string]interface{}{"Status": "success", "Message": "Producto encontrado", "Product": product})
 				}
 
 			case "put":
 				log.Printf("[RabbitMQ] Actualizando producto con ID: %d", msg.Id)
 				err := r.updateUseCase.Execute(msg.Id, msg.Name, msg.Price)
 				if err != nil {
-					log.Printf("[RabbitMQ] Error al actualizar producto: %s", err)
+					r.publisher.PublishMessage(map[string]string{"Status": "error", "Message": "Error al actualizar producto"})
+				} else {
+					r.publisher.PublishMessage(map[string]string{"Status": "success", "Message": "Producto actualizado exitosamente"})
 				}
 
 			case "delete":
 				log.Printf("[RabbitMQ] Eliminando producto con ID: %d", msg.Id)
 				err := r.deleteUseCase.Execute(msg.Id)
 				if err != nil {
-					log.Printf("[RabbitMQ] Error al eliminar producto: %s", err)
+					r.publisher.PublishMessage(map[string]string{"Status": "error", "Message": "Error al eliminar producto"})
+				} else {
+					r.publisher.PublishMessage(map[string]string{"Status": "success", "Message": "Producto eliminado exitosamente"})
 				}
 			}
 		}
@@ -131,5 +146,8 @@ func (r *RabbitMQConsumer) Close() {
 	}
 	if r.conn != nil {
 		r.conn.Close()
+	}
+	if r.publisher != nil {
+		r.publisher.Close()
 	}
 }
